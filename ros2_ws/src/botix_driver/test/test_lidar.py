@@ -12,7 +12,13 @@ from botix_driver.lidar import (
     DATAGRAM_VERSION,
     FrameParser,
     ScanAssembler,
+    camsense_checksum,
     crc8,
+)
+
+
+CAMSENSE_PACKET = bytes.fromhex(
+    "55AA0308EF4DB1C200800000800000800000800000800000800000800000800033C4D133"
 )
 
 
@@ -75,6 +81,32 @@ def test_rejects_a_corrupted_frame():
 def test_header_byte_inside_payload_does_not_desynchronise():
     # 0x5454 as a distance puts the sync byte in the middle of the frame
     assert len(FrameParser().feed(make_frame(30, 41, [0x5454] * 12))) == 1
+
+
+def test_decodes_a_real_camsense_x1_packet():
+    parser = FrameParser()
+    frames = parser.feed(CAMSENSE_PACKET)
+
+    assert len(frames) == 1
+    assert frames[0].speed_deg_s == 1870
+    assert len(frames[0].points) == 8
+    assert camsense_checksum(CAMSENSE_PACKET[:34]) == int.from_bytes(
+        CAMSENSE_PACKET[34:], "little"
+    )
+
+
+def test_camsense_packet_split_across_reads():
+    parser = FrameParser()
+
+    assert parser.feed(CAMSENSE_PACKET[:13]) == []
+    assert len(parser.feed(CAMSENSE_PACKET[13:])) == 1
+
+
+def test_auto_detects_both_supported_protocols_in_one_stream():
+    parser = FrameParser()
+    frames = parser.feed(CAMSENSE_PACKET + make_frame(10, 21, [500] * 12))
+
+    assert len(frames) == 2
 
 
 def test_datagram_loss_is_counted_and_discards_the_straddling_frame():

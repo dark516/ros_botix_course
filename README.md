@@ -5,7 +5,7 @@ rover. One node bridges the robot's two UDP streams onto the ROS graph.
 
 | Direction | Topic | Type | Source |
 | :-- | :-- | :-- | :-- |
-| out | `/scan` | `sensor_msgs/LaserScan` | D500 lidar frames forwarded by the firmware |
+| out | `/scan` | `sensor_msgs/LaserScan` | Camsense X1 or LDROBOT frames forwarded by the firmware |
 | out | `/odom` | `nav_msgs/Odometry` | encoder counts, integrated on this side |
 | out | `/joint_states` | `sensor_msgs/JointState` | encoder counts |
 | out | `tf` | `odom` → `base_link` | same integration |
@@ -17,7 +17,7 @@ lidar forwarder and the encoder-tick messages live there.
 
 ## Wiring the lidar
 
-The D500 transmits and never listens, so it needs one signal wire and a shared
+The installed sensor transmits and never listens, so it needs one signal wire and a shared
 ground. **Do not use the pin silkscreened `RX`.** That is GPIO3, UART0 — the
 console, the log and the programming line, already driven by the USB bridge.
 A lidar there fights the bridge for the wire and feeds binary to the command
@@ -45,6 +45,8 @@ python3 ../botix-esp32-firmware/tools/botix_console.py --host botix.local shell
 ```
 config set user.lidar.enabled true
 config set user.lidar.uart 2
+config set user.lidar.rx_pin 16
+config set user.lidar.baudrate 115200
 config save
 reboot
 ```
@@ -87,22 +89,17 @@ The robot's own drivetrain trim is separate and lives in its config as
 
 ## What has been tested
 
-The frame decoder has unit tests covering split frames, resynchronisation after
-garbage, CRC rejection, a `0x54` inside a payload, datagram loss, and foreign
+The frame decoder auto-detects Camsense X1 (`55 AA 03 08`, 36 bytes) and
+LDROBOT (`54 2C`, 47 bytes). Its tests cover real captured Camsense data, split
+frames, resynchronisation, checksum rejection, datagram loss, and foreign
 traffic on the port:
 
 ```bash
 cd ros2_ws/src/botix_driver && python3 -m pytest test -q
 ```
 
-The whole node has been exercised against a loopback stand-in that speaks both
-streams: `/scan` published at 10.5 Hz, `/odom` integrated a straight 11.6 m run
-to within rounding, and `/cmd_vel` at 0.25 m/s and 1.5 rad/s arrived as
-`z=500, r=-500`.
-
-**Not tested against the sensor.** The D500 was still wired to the wrong pin
-when this was written, so the framing constants come from the LD06 family
-datasheet rather than from captured bytes. If `/scan` stays empty while the
-robot's `lidar` command shows bytes arriving, the decoder is the place to look:
-the CRC polynomial and the 47-byte layout are the two things most likely to
-differ on a clone.
+The installed lidar was verified over the complete GPIO16 -> ESP32 -> UDP ->
+ROS path. It identifies as the Camsense X1 protocol rather than the advertised
+D500/STL-19P protocol: 468 checksum-valid packets and 3744 points were decoded
+in an 8-second probe. `/scan` publishes at about 6 Hz with measured ranges and
+intensities. The loopback checks for odometry and `/cmd_vel` also pass.

@@ -1,7 +1,7 @@
 # Copyright (c) 2026
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Decoder for LD06 / LD19 / D500 lidar frames arriving over UDP.
+"""Decoder for LDROBOT and Camsense X1 lidar frames arriving over UDP.
 
 The firmware forwards UART bytes verbatim rather than parsing them, so all
 framing knowledge lives here.  A frame is 47 bytes:
@@ -28,6 +28,10 @@ from dataclasses import dataclass, field
 HEADER = 0x54
 POINTS_PER_FRAME = 12
 FRAME_LENGTH = 47
+CAMSENSE_HEADER = bytes.fromhex("55 AA 03 08")
+CAMSENSE_POINTS_PER_FRAME = 8
+CAMSENSE_FRAME_LENGTH = 36
+CAMSENSE_ANGLE_OFFSET = 0xA000
 
 # The datagram header the firmware prepends: magic 'L', version, sequence
 DATAGRAM_HEADER = struct.Struct("<BBH")
@@ -54,6 +58,15 @@ def crc8(data: bytes) -> int:
     for byte in data:
         crc = CRC_TABLE[crc ^ byte]
     return crc
+
+
+def camsense_checksum(data: bytes) -> int:
+    """Return the 15-bit folded checksum used by Camsense scan packets."""
+    checksum = 0
+    for offset in range(0, len(data) - 1, 2):
+        word = data[offset] | (data[offset + 1] << 8)
+        checksum = ((checksum << 1) + word) & 0xFFFF_FFFF
+    return ((checksum & 0x7FFF) + (checksum >> 15)) & 0x7FFF
 
 
 @dataclass
@@ -118,31 +131,44 @@ class FrameParser:
         frames = []
 
         while True:
-            start = self._buffer.find(HEADER)
+            ld_start = self._buffer.find(HEADER)
+            camsense_start = self._buffer.find(CAMSENSE_HEADER)
+            starts = [value for value in (ld_start, camsense_start) if value >= 0]
 
-            if start < 0:
-                # Nothing usable; keep the tail in case a header straddles reads
-                self._buffer.clear()
+            if not starts:
+                # Preserve enough tail for a Camsense header split across reads.
+                if len(self._buffer) > len(CAMSENSE_HEADER) - 1:
+                    del self._buffer[: -(len(CAMSENSE_HEADER) - 1)]
                 break
+
+            start = min(starts)
 
             if start > 0:
                 self.stats.resyncs += 1
                 del self._buffer[:start]
 
-            if len(self._buffer) < FRAME_LENGTH:
+            is_camsense = self._buffer.startswith(CAMSENSE_HEADER)
+            frame_length = CAMSENSE_FRAME_LENGTH if is_camsense else FRAME_LENGTH
+
+            if len(self._buffer) < frame_length:
                 break
 
-            candidate = bytes(self._buffer[:FRAME_LENGTH])
+            candidate = bytes(self._buffer[:frame_length])
 
-            if crc8(candidate[:-1]) != candidate[-1]:
+            checksum_ok = (
+                camsense_checksum(candidate[:34]) == int.from_bytes(candidate[34:36], "little")
+                if is_camsense
+                else crc8(candidate[:-1]) == candidate[-1]
+            )
+            if not checksum_ok:
                 self.stats.crc_errors += 1
                 # Not a real frame boundary: step past this header and retry
                 del self._buffer[:1]
                 continue
 
-            del self._buffer[:FRAME_LENGTH]
+            del self._buffer[:frame_length]
 
-            frame = _decode(candidate)
+            frame = _decode_camsense(candidate) if is_camsense else _decode(candidate)
             if frame is not None:
                 self.stats.frames += 1
                 frames.append(frame)
@@ -177,6 +203,33 @@ def _decode(raw: bytes) -> Frame | None:
         start_angle_deg=start_deg,
         end_angle_deg=end_deg,
         timestamp_ms=timestamp,
+        points=points,
+    )
+
+
+def _decode_camsense(raw: bytes) -> Frame | None:
+    rotation_speed, start_raw = struct.unpack_from("<HH", raw, 4)
+    end_raw = struct.unpack_from("<H", raw, 32)[0]
+
+    if start_raw < CAMSENSE_ANGLE_OFFSET or end_raw < CAMSENSE_ANGLE_OFFSET:
+        return None
+
+    start_deg = (start_raw - CAMSENSE_ANGLE_OFFSET) / 64.0
+    end_deg = (end_raw - CAMSENSE_ANGLE_OFFSET) / 64.0
+    span = (end_deg - start_deg) % 360.0
+    step = span / (CAMSENSE_POINTS_PER_FRAME - 1)
+
+    points = []
+    for index in range(CAMSENSE_POINTS_PER_FRAME):
+        distance_mm, intensity = struct.unpack_from("<hB", raw, 8 + index * 3)
+        angle = (start_deg + step * index) % 360.0
+        points.append((angle, distance_mm / 1000.0, intensity))
+
+    return Frame(
+        speed_deg_s=round(rotation_speed * 360.0 / 3840.0),
+        start_angle_deg=start_deg,
+        end_angle_deg=end_deg,
+        timestamp_ms=0,
         points=points,
     )
 
