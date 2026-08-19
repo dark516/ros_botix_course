@@ -3,8 +3,8 @@
   Simplified Botix URDF derived from botix.fcstd placements.
 
   Key CAD-derived dimensions:
-  - drive wheel diameter: 67.6 mm
-  - drive wheel separation: ~175.4 mm
+  - drive wheel diameter: 67 mm
+  - drive wheel separation: 175 mm
   - side wall mounts: +/-70 mm from center
   - deck height over platform origin: 35 mm
 
@@ -40,7 +40,7 @@
   <joint name="base_footprint_to_base_link" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
-    <origin xyz="0 0 0.0338" rpy="0 0 0"/>
+    <origin xyz="0 0 0.0335" rpy="0 0 0"/>
   </joint>
 
   <link name="base_link">
@@ -69,7 +69,7 @@
   <joint name="left_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="left_wheel_link"/>
-    <origin xyz="0.000 0.0877 0.000" rpy="0 0 0"/>
+    <origin xyz="0.000 0.0875 0.000" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
   </joint>
 
@@ -83,7 +83,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
       <geometry>
-        <cylinder radius="0.0338" length="0.0254"/>
+        <cylinder radius="0.0335" length="0.0254"/>
       </geometry>
       <material name="wheel_black"/>
     </visual>
@@ -91,7 +91,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
       <geometry>
-        <cylinder radius="0.0338" length="0.0254"/>
+        <cylinder radius="0.0335" length="0.0254"/>
       </geometry>
     </collision>
   </link>
@@ -99,7 +99,7 @@
   <joint name="right_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="right_wheel_link"/>
-    <origin xyz="0.000 -0.0877 0.000" rpy="0 0 0"/>
+    <origin xyz="0.000 -0.0875 0.000" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
   </joint>
 
@@ -113,7 +113,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
       <geometry>
-        <cylinder radius="0.0338" length="0.0254"/>
+        <cylinder radius="0.0335" length="0.0254"/>
       </geometry>
       <material name="wheel_black"/>
     </visual>
@@ -121,7 +121,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
       <geometry>
-        <cylinder radius="0.0338" length="0.0254"/>
+        <cylinder radius="0.0335" length="0.0254"/>
       </geometry>
     </collision>
   </link>

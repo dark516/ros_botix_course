@@ -57,7 +57,7 @@ odom
 
 ## Kinematics
 
-The URDF wheel radius is 0.0338 m and wheel separation is 0.1754 m. These become
+The URDF wheel radius is 0.0335 m and wheel separation is 0.175 m. These become
 the bridge defaults for ROS kinematics and visualization. The ESP32 registry
 fields `device.encoder.left_mm_per_tick` and
 `device.encoder.right_mm_per_tick` are authoritative for encoder scale; the ROS

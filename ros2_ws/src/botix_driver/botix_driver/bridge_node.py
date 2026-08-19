@@ -67,8 +67,8 @@ class BotixBridge(Node):
         self.declare_parameter("target_system", 1)
 
         # kinematics
-        self.declare_parameter("wheel_separation", 0.1754)
-        self.declare_parameter("wheel_radius", 0.0338)
+        self.declare_parameter("wheel_separation", 0.175)
+        self.declare_parameter("wheel_radius", 0.0335)
         self.declare_parameter("max_linear_speed", 0.5)
         self.declare_parameter("max_angular_speed", 3.0)
 

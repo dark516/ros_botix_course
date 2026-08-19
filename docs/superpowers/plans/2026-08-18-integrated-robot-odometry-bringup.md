@@ -31,7 +31,7 @@
 1. Add a failing test for extracting the first two wheels from a `WHEEL_DISTANCE` sample and rejecting incomplete samples.
 2. Refactor MAVLink handling so `WHEEL_DISTANCE` drives odometry; keep `NAMED_VALUE_INT` counters as diagnostics without integrating them.
 3. Publish joint position and velocity in radians from calibrated wheel distances.
-4. Set defaults to wheel separation `0.1754`, wheel radius `0.0338`, base frame `base_footprint`, and lidar frame `laser_frame`; remove ROS `mm_per_tick` and tick sign calibration.
+4. Set defaults to wheel separation `0.175`, wheel radius `0.0335`, base frame `base_footprint`, and lidar frame `laser_frame`; remove ROS `mm_per_tick` and tick sign calibration.
 5. Run focused and full package tests.
 
 ### Task 3: Integrate robot_description into hardware bringup

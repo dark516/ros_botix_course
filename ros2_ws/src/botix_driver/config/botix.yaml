@@ -11,8 +11,8 @@ botix_bridge:
     lidar_port: 14560
 
     # distance between wheel contact patches, metres
-    wheel_separation: 0.1754
-    wheel_radius: 0.0338
+    wheel_separation: 0.175
+    wheel_radius: 0.0335
 
     # speed at which cmd_vel saturates the robot's 0..1000 command range
     max_linear_speed: 0.5
