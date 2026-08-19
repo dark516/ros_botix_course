@@ -1,0 +1,331 @@
+<?xml version="1.0"?>
+<!--
+  Simplified Botix URDF derived from botix.fcstd placements.
+
+  Key CAD-derived dimensions:
+  - drive wheel diameter: 67.6 mm
+  - drive wheel separation: ~175.4 mm
+  - side wall mounts: +/-70 mm from center
+  - deck height over platform origin: 35 mm
+
+  Assumptions:
+  - base_link is centered between the drive wheel axles
+  - base_footprint lies on the floor directly below base_link
+  - visuals are primitive placeholders until CAD meshes are exported to STL/DAE
+  - laser_frame is a placeholder frame for the future lidar mount
+-->
+<robot name="botix">
+  <material name="body_grey">
+    <color rgba="0.30 0.32 0.35 1.0"/>
+  </material>
+
+  <material name="deck_black">
+    <color rgba="0.12 0.12 0.14 1.0"/>
+  </material>
+
+  <material name="panel_blue">
+    <color rgba="0.17 0.30 0.60 1.0"/>
+  </material>
+
+  <material name="wheel_black">
+    <color rgba="0.05 0.05 0.05 1.0"/>
+  </material>
+
+  <material name="sensor_green">
+    <color rgba="0.18 0.55 0.30 1.0"/>
+  </material>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.0338" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0.008" rpy="0 0 0"/>
+      <mass value="1.4"/>
+      <inertia ixx="0.00239167" ixy="0.0" ixz="0.0" iyy="0.00239167" iyz="0.0" izz="0.00457333"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0.008" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.140 0.140 0.030"/>
+      </geometry>
+      <material name="body_grey"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0.008" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.140 0.140 0.030"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <origin xyz="0.000 0.0877 0.000" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="left_wheel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <mass value="0.12"/>
+      <inertia ixx="0.00004072" ixy="0.0" ixz="0.0" iyy="0.00004072" iyz="0.0" izz="0.00006855"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.0338" length="0.0254"/>
+      </geometry>
+      <material name="wheel_black"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.0338" length="0.0254"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <origin xyz="0.000 -0.0877 0.000" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="right_wheel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <mass value="0.12"/>
+      <inertia ixx="0.00004072" ixy="0.0" ixz="0.0" iyy="0.00004072" iyz="0.0" izz="0.00006855"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.0338" length="0.0254"/>
+      </geometry>
+      <material name="wheel_black"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.0338" length="0.0254"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="deck_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="deck_link"/>
+    <origin xyz="0.000 0.000 0.0225" rpy="0 0 0"/>
+  </joint>
+
+  <link name="deck_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.15"/>
+      <inertia ixx="0.00015145" ixy="0.0" ixz="0.0" iyy="0.00024520" iyz="0.0" izz="0.00039625"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.140 0.110 0.004"/>
+      </geometry>
+      <material name="deck_black"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.140 0.110 0.004"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_side_panel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="left_side_panel_link"/>
+    <origin xyz="0.000 0.070 0.010" rpy="0 0 0"/>
+  </joint>
+
+  <link name="left_side_panel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.08"/>
+      <inertia ixx="0.00001077" ixy="0.0" ixz="0.0" iyy="0.00010667" iyz="0.0" izz="0.00009611"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.120 0.004 0.040"/>
+      </geometry>
+      <material name="panel_blue"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.120 0.004 0.040"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_side_panel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="right_side_panel_link"/>
+    <origin xyz="0.000 -0.070 0.010" rpy="0 0 0"/>
+  </joint>
+
+  <link name="right_side_panel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.08"/>
+      <inertia ixx="0.00001077" ixy="0.0" ixz="0.0" iyy="0.00010667" iyz="0.0" izz="0.00009611"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.120 0.004 0.040"/>
+      </geometry>
+      <material name="panel_blue"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.120 0.004 0.040"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="rear_wall_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rear_wall_link"/>
+    <origin xyz="-0.070 0.000 0.010" rpy="0 0 0"/>
+  </joint>
+
+  <link name="rear_wall_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.06"/>
+      <inertia ixx="0.00007813" ixy="0.0" ixz="0.0" iyy="0.00000620" iyz="0.0" izz="0.00007208"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.004 0.120 0.035"/>
+      </geometry>
+      <material name="panel_blue"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.004 0.120 0.035"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="front_left_support_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_left_support_link"/>
+    <origin xyz="0.050 0.030 -0.018" rpy="0 0 0"/>
+  </joint>
+
+  <link name="front_left_support_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.03"/>
+      <inertia ixx="0.00000081" ixy="0.0" ixz="0.0" iyy="0.00000281" iyz="0.0" izz="0.00000250"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.030 0.010 0.015"/>
+      </geometry>
+      <material name="body_grey"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.030 0.010 0.015"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="front_right_support_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_right_support_link"/>
+    <origin xyz="0.050 -0.030 -0.018" rpy="0 0 0"/>
+  </joint>
+
+  <link name="front_right_support_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.03"/>
+      <inertia ixx="0.00000081" ixy="0.0" ixz="0.0" iyy="0.00000281" iyz="0.0" izz="0.00000250"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.030 0.010 0.015"/>
+      </geometry>
+      <material name="body_grey"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.030 0.010 0.015"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="laser_mount_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="0.055 0.000 0.050" rpy="0 0 0"/>
+  </joint>
+
+  <link name="laser_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="0.00000594" ixy="0.0" ixz="0.0" iyy="0.00000594" iyz="0.0" izz="0.00001000"/>
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.015"/>
+      </geometry>
+      <material name="sensor_green"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.015"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

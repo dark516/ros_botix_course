@@ -1,9 +1,8 @@
 # Parameters for the Botix bridge.
 #
-# The kinematic values are placeholders measured on one chassis. Wheel base and
-# mm_per_tick decide whether odometry means anything, so calibrate them before
-# trusting /odom: drive a measured straight line and a measured full turn, then
-# scale until the reported motion matches.
+# Encoder scale is calibrated on the ESP32 through the separate
+# device.encoder.left_mm_per_tick and device.encoder.right_mm_per_tick fields.
+# These values describe the geometry used by ROS differential-drive kinematics.
 botix_bridge:
   ros__parameters:
     robot_host: botix.local
@@ -12,28 +11,24 @@ botix_bridge:
     lidar_port: 14560
 
     # distance between wheel contact patches, metres
-    wheel_base: 0.15
-    # must match device.encoder.mm_per_tick on the robot
-    mm_per_tick: 1.0
+    wheel_separation: 0.1754
+    wheel_radius: 0.0338
 
     # speed at which cmd_vel saturates the robot's 0..1000 command range
     max_linear_speed: 0.5
     max_angular_speed: 3.0
 
-    # the left motor is mounted mirrored, so its encoder counts down going forward
-    left_ticks_sign: -1
-    right_ticks_sign: 1
     # the tank mixer turns clockwise for positive r; ROS wants counter-clockwise
     invert_turn: true
 
     scan_bins: 360
     range_min: 0.02
     range_max: 12.0
-    lidar_frame: laser
+    lidar_frame: laser_frame
     angle_offset_deg: 0.0
 
     odom_frame: odom
-    base_frame: base_link
+    base_frame: base_footprint
     publish_tf: true
 
     command_rate: 20.0

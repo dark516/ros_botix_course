@@ -74,13 +74,11 @@ rviz2 -d rviz/botix.rviz
 The defaults in `config/botix.yaml` are placeholders from one chassis. Odometry
 means nothing until these match your robot:
 
-- **`wheel_base`** — distance between the wheel contact patches. Command a
+- **`wheel_separation`** — distance between the wheel contact patches. Command a
   known rotation and scale until the reported yaw matches.
-- **`mm_per_tick`** — must equal `device.encoder.mm_per_tick` on the robot.
-  Drive a measured straight line and compare against `/odom`.
-- **`left_ticks_sign`** — the left motor is mounted mirrored on this chassis,
-  so its encoder counts down while driving forward. Confirm with `telemetry`
-  on the robot console before trusting anything downstream.
+- **encoder scale** — configure `device.encoder.left_mm_per_tick` and
+  `device.encoder.right_mm_per_tick` on the robot. Drive a measured straight
+  line and compare wheel-distance telemetry against `/odom`.
 - **`invert_turn`** — the tank mixer computes `left = z + r`, turning clockwise
   for positive `r`, while positive `angular.z` in ROS is counter-clockwise.
 

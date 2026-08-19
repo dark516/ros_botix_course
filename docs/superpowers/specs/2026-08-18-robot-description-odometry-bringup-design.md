@@ -11,8 +11,10 @@ calibrated.
 ## Architecture
 
 `botix_description` owns geometry, link names, joint names, and the lidar mount.
-`botix_driver` owns hardware UDP transport, encoder conversion, wheel odometry,
-and `cmd_vel`. A single hardware launch file in `botix_driver` loads the URDF
+The ESP32 owns encoder tick-to-distance calibration and publishes both standard
+MAVLink `WHEEL_DISTANCE` values and raw counters. `botix_driver` owns hardware
+UDP transport, differential-drive pose integration, ROS messages, and
+`cmd_vel`. A single hardware launch file in `botix_driver` loads the URDF
 from `botix_description`, starts `robot_state_publisher`, starts the bridge, and
 optionally starts RViz.
 
@@ -56,14 +58,19 @@ odom
 ## Kinematics
 
 The URDF wheel radius is 0.0338 m and wheel separation is 0.1754 m. These become
-the initial bridge defaults, with YAML parameters remaining authoritative for
-calibration. Encoder distance is converted to wheel angle as
-`distance_m / wheel_radius_m`; `JointState.position` must never contain metres.
+the bridge defaults for ROS kinematics and visualization. The ESP32 registry
+fields `device.encoder.left_mm_per_tick` and
+`device.encoder.right_mm_per_tick` are authoritative for encoder scale; the ROS
+bridge consumes the already calibrated metre values in MAVLink
+`WHEEL_DISTANCE` and does not apply a second tick scale. Raw `enc_left` and
+`enc_right` values remain available for diagnostics. Encoder distance is
+converted to wheel angle as `distance_m / wheel_radius_m`; `JointState.position`
+must never contain metres.
 
-Odometry continues to use differential-drive midpoint integration. Encoder
-signs and `mm_per_tick` are read from parameters and verified against live
-motion. The test sequence is stop, forward, reverse, positive yaw, and negative
-yaw. Every command ends with zero velocity, including error paths.
+Odometry continues to use differential-drive midpoint integration. The
+calibrated wheel-distance signs are verified against live motion. The test
+sequence is stop, forward, reverse, positive yaw, and negative yaw. Every
+command ends with zero velocity, including error paths.
 
 ## RViz
 

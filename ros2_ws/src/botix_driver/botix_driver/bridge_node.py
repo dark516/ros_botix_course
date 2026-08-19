@@ -9,7 +9,7 @@ Two UDP sockets, because the robot keeps the streams apart:
     pair holding raw encoder counts, and takes MANUAL_CONTROL back.
   * Raw lidar bytes arrive on ``lidar_port``.
 
-Published: /scan, /odom, /joint_states, and the odom -> base_link transform.
+Published: /scan, /odom, /joint_states, /wheel_ticks, and odom TF.
 Subscribed: /cmd_vel.
 """
 
@@ -24,9 +24,11 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from sensor_msgs.msg import JointState, LaserScan
+from std_msgs.msg import Int64MultiArray
 from tf2_ros import TransformBroadcaster
 
 from botix_driver.lidar import FrameParser, ScanAssembler
+from botix_driver.odometry import DifferentialDriveOdometry, wheel_distances
 
 try:
     from pymavlink.dialects.v20 import common as mavlink2
@@ -65,17 +67,12 @@ class BotixBridge(Node):
         self.declare_parameter("target_system", 1)
 
         # kinematics
-        self.declare_parameter("wheel_base", 0.15)
-        self.declare_parameter("mm_per_tick", 1.0)
+        self.declare_parameter("wheel_separation", 0.1754)
+        self.declare_parameter("wheel_radius", 0.0338)
         self.declare_parameter("max_linear_speed", 0.5)
         self.declare_parameter("max_angular_speed", 3.0)
 
-        # The left encoder counts down as the robot drives forward on this
-        # chassis, because the motor is mounted mirrored. Measured, not assumed:
-        # check it with `telemetry` before trusting odometry.
-        self.declare_parameter("left_ticks_sign", -1)
-        self.declare_parameter("right_ticks_sign", 1)
-
+        # Encoder direction and distance scale are calibrated on the ESP32.
         # The tank mixer computes left = z + r, so a positive r turns the robot
         # clockwise, while positive angular.z in ROS is counter-clockwise.
         self.declare_parameter("invert_turn", True)
@@ -84,12 +81,12 @@ class BotixBridge(Node):
         self.declare_parameter("scan_bins", 360)
         self.declare_parameter("range_min", 0.02)
         self.declare_parameter("range_max", 12.0)
-        self.declare_parameter("lidar_frame", "laser")
+        self.declare_parameter("lidar_frame", "laser_frame")
         self.declare_parameter("angle_offset_deg", 0.0)
 
         # frames
         self.declare_parameter("odom_frame", "odom")
-        self.declare_parameter("base_frame", "base_link")
+        self.declare_parameter("base_frame", "base_footprint")
         self.declare_parameter("publish_tf", True)
 
         # control
@@ -103,6 +100,7 @@ class BotixBridge(Node):
         self.scan_publisher = self.create_publisher(LaserScan, "scan", QoSPresetProfiles.SENSOR_DATA.value)
         self.odom_publisher = self.create_publisher(Odometry, "odom", 10)
         self.joint_publisher = self.create_publisher(JointState, "joint_states", 10)
+        self.tick_publisher = self.create_publisher(Int64MultiArray, "wheel_ticks", 10)
 
         self.create_subscription(Twist, "cmd_vel", self._on_cmd_vel, 10)
 
@@ -112,8 +110,9 @@ class BotixBridge(Node):
         self.assembler = ScanAssembler(self.scan_bins, self.range_min, self.range_max)
 
         self._ticks: tuple[int | None, int | None] = (None, None)
-        self._previous_ticks: tuple[int, int] | None = None
-        self._pose = [0.0, 0.0, 0.0]  # x, y, yaw
+        self.odometry = DifferentialDriveOdometry(
+            self.wheel_separation, self.wheel_radius
+        )
         self._last_odom_time = self.get_clock().now()
 
         self._drive = 0
@@ -138,12 +137,10 @@ class BotixBridge(Node):
         self.local_port = get("local_port").value
         self.lidar_port = get("lidar_port").value
 
-        self.wheel_base = get("wheel_base").value
-        self.metres_per_tick = get("mm_per_tick").value / 1000.0
+        self.wheel_separation = get("wheel_separation").value
+        self.wheel_radius = get("wheel_radius").value
         self.max_linear_speed = get("max_linear_speed").value
         self.max_angular_speed = get("max_angular_speed").value
-        self.left_ticks_sign = get("left_ticks_sign").value
-        self.right_ticks_sign = get("right_ticks_sign").value
         self.invert_turn = get("invert_turn").value
 
         self.scan_bins = get("scan_bins").value
@@ -206,6 +203,12 @@ class BotixBridge(Node):
     def _on_mavlink(self, message) -> None:
         kind = message.get_type()
 
+        if kind == "WHEEL_DISTANCE":
+            distances = wheel_distances(message)
+            if distances is not None:
+                self._update_odometry(*distances)
+            return
+
         if kind != "NAMED_VALUE_INT":
             return
 
@@ -224,54 +227,37 @@ class BotixBridge(Node):
 
         # The firmware emits both halves back to back; integrate once paired
         if left is not None and right is not None:
-            self._update_odometry(left, right)
+            tick_message = Int64MultiArray()
+            tick_message.data = [left, right]
+            self.tick_publisher.publish(tick_message)
             self._ticks = (None, None)
 
     # odometry
 
-    def _update_odometry(self, left_raw: int, right_raw: int) -> None:
-        left = left_raw * self.left_ticks_sign
-        right = right_raw * self.right_ticks_sign
-
+    def _update_odometry(self, left: float, right: float) -> None:
         now = self.get_clock().now()
-
-        if self._previous_ticks is None:
-            self._previous_ticks = (left, right)
-            self._last_odom_time = now
-            return
-
-        delta_left = (left - self._previous_ticks[0]) * self.metres_per_tick
-        delta_right = (right - self._previous_ticks[1]) * self.metres_per_tick
-        self._previous_ticks = (left, right)
-
         elapsed = (now - self._last_odom_time).nanoseconds / 1e9
         self._last_odom_time = now
-
-        if elapsed <= 0.0:
+        update = self.odometry.update(left, right, elapsed)
+        if update is None:
             return
 
-        distance = (delta_left + delta_right) / 2.0
-        rotation = (delta_right - delta_left) / self.wheel_base
+        self._publish_odometry(
+            now, update.pose, update.linear_velocity, update.angular_velocity
+        )
+        self._publish_joints(
+            now, update.wheel_positions, update.wheel_velocities
+        )
 
-        # Integrate about the midpoint of the arc rather than its start, which
-        # keeps a continuous turn from drifting outward
-        heading = self._pose[2] + rotation / 2.0
-        self._pose[0] += distance * math.cos(heading)
-        self._pose[1] += distance * math.sin(heading)
-        self._pose[2] = (self._pose[2] + rotation + math.pi) % (2.0 * math.pi) - math.pi
-
-        self._publish_odometry(now, distance / elapsed, rotation / elapsed)
-        self._publish_joints(now, left, right)
-
-    def _publish_odometry(self, stamp, linear: float, angular: float) -> None:
+    def _publish_odometry(self, stamp, pose, linear: float, angular: float) -> None:
         message = Odometry()
         message.header.stamp = stamp.to_msg()
         message.header.frame_id = self.odom_frame
         message.child_frame_id = self.base_frame
 
-        message.pose.pose.position.x = self._pose[0]
-        message.pose.pose.position.y = self._pose[1]
-        message.pose.pose.orientation = yaw_to_quaternion(self._pose[2])
+        message.pose.pose.position.x = pose[0]
+        message.pose.pose.position.y = pose[1]
+        message.pose.pose.orientation = yaw_to_quaternion(pose[2])
 
         message.twist.twist.linear.x = linear
         message.twist.twist.angular.z = angular
@@ -283,19 +269,17 @@ class BotixBridge(Node):
             transform.header.stamp = stamp.to_msg()
             transform.header.frame_id = self.odom_frame
             transform.child_frame_id = self.base_frame
-            transform.transform.translation.x = self._pose[0]
-            transform.transform.translation.y = self._pose[1]
-            transform.transform.rotation = yaw_to_quaternion(self._pose[2])
+            transform.transform.translation.x = pose[0]
+            transform.transform.translation.y = pose[1]
+            transform.transform.rotation = yaw_to_quaternion(pose[2])
             self.tf_broadcaster.sendTransform(transform)
 
-    def _publish_joints(self, stamp, left: int, right: int) -> None:
+    def _publish_joints(self, stamp, positions, velocities) -> None:
         message = JointState()
         message.header.stamp = stamp.to_msg()
         message.name = ["left_wheel_joint", "right_wheel_joint"]
-        message.position = [
-            left * self.metres_per_tick,
-            right * self.metres_per_tick,
-        ]
+        message.position = list(positions)
+        message.velocity = list(velocities)
         self.joint_publisher.publish(message)
 
     # lidar

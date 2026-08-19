@@ -14,6 +14,7 @@ setup(
         ("share/" + package_name + "/rviz", ["rviz/botix.rviz"]),
     ],
     install_requires=["setuptools"],
+    extras_require={"test": ["pytest"]},
     zip_safe=True,
     maintainer="dark516",
     maintainer_email="sashakulagin2007@gmail.com",
