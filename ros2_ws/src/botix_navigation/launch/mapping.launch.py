@@ -4,7 +4,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -19,12 +19,15 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("robot_host", default_value="botix.local"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(driver, "launch", "bringup.launch.py")),
-            launch_arguments={
-                "robot_host": LaunchConfiguration("robot_host"),
-                "use_rviz": "false",
-            }.items(),
+        GroupAction(
+            scoped=True,
+            actions=[IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(driver, "launch", "bringup.launch.py")),
+                launch_arguments={
+                    "robot_host": LaunchConfiguration("robot_host"),
+                    "use_rviz": "false",
+                }.items(),
+            )],
         ),
         Node(package="botix_navigation", executable="cmd_mux", output="screen"),
         IncludeLaunchDescription(
