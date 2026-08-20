@@ -6,7 +6,21 @@ from types import SimpleNamespace
 
 import pytest
 
-from botix_driver.odometry import DifferentialDriveOdometry, wheel_distances
+from botix_driver.odometry import (
+    DifferentialDriveOdometry,
+    planar_covariance,
+    wheel_distances,
+)
+
+
+def test_planar_covariance_sets_observed_and_unobserved_axes():
+    covariance = planar_covariance(0.02, 0.03, 0.05)
+
+    assert len(covariance) == 36
+    assert covariance[0] == 0.02
+    assert covariance[7] == 0.03
+    assert covariance[35] == 0.05
+    assert covariance[14] == covariance[21] == covariance[28] == 1e6
 
 
 def test_first_sample_establishes_baseline_without_motion():

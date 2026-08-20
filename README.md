@@ -69,6 +69,52 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 rviz2 -d rviz/botix.rviz
 ```
 
+## Mapping and navigation
+
+Install the navigation stack once:
+
+```bash
+sudo apt install ros-jazzy-slam-toolbox ros-jazzy-navigation2 \
+  ros-jazzy-nav2-bringup ros-jazzy-twist-mux
+```
+
+For the first run, build a map while driving manually. The mapping launch opens
+RViz with the map, lidar, model, and wheel odometry:
+
+```bash
+ros2 launch botix_navigation mapping.launch.py robot_host:=botix.local
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args --remap cmd_vel:=/cmd_vel_teleop
+```
+
+Drive slowly through every reachable area and revisit the starting area so
+SLAM Toolbox can close the loop. Save both the Nav2 occupancy map and the pose
+graph without adding an extension:
+
+```bash
+ros2 run botix_navigation save_map "$HOME/maps/botix_lab"
+```
+
+This creates `botix_lab.yaml`/`botix_lab.pgm` for Nav2 and pose-graph files for
+future SLAM sessions. Start localization and navigation using the YAML file:
+
+```bash
+ros2 launch botix_navigation navigation.launch.py \
+  map:="$HOME/maps/botix_lab.yaml" robot_host:=botix.local
+```
+
+In RViz, set the initial pose with **2D Pose Estimate**, then send goals with
+**Nav2 Goal**. Manual commands override autonomous commands. To lock all motion:
+
+```bash
+ros2 topic pub --once /cmd_vel_lock std_msgs/msg/Bool '{data: true}'
+# Unlock again:
+ros2 topic pub --once /cmd_vel_lock std_msgs/msg/Bool '{data: false}'
+```
+
+The command path is `/cmd_vel_teleop` (priority 100) and `/cmd_vel_nav`
+(priority 50) through `twist_mux` to the hardware-only `/cmd_vel` topic.
+
 ## Calibration
 
 The defaults in `config/botix.yaml` are placeholders from one chassis. Odometry

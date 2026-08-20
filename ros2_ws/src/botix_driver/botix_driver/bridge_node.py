@@ -28,7 +28,11 @@ from std_msgs.msg import Int64MultiArray
 from tf2_ros import TransformBroadcaster
 
 from botix_driver.lidar import FrameParser, ScanAssembler
-from botix_driver.odometry import DifferentialDriveOdometry, wheel_distances
+from botix_driver.odometry import (
+    DifferentialDriveOdometry,
+    planar_covariance,
+    wheel_distances,
+)
 
 try:
     from pymavlink.dialects.v20 import common as mavlink2
@@ -88,6 +92,10 @@ class BotixBridge(Node):
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("base_frame", "base_footprint")
         self.declare_parameter("publish_tf", True)
+        self.declare_parameter("pose_xy_variance", 0.02)
+        self.declare_parameter("pose_yaw_variance", 0.05)
+        self.declare_parameter("twist_linear_variance", 0.04)
+        self.declare_parameter("twist_angular_variance", 0.08)
 
         # control
         self.declare_parameter("command_rate", 20.0)
@@ -152,6 +160,16 @@ class BotixBridge(Node):
         self.odom_frame = get("odom_frame").value
         self.base_frame = get("base_frame").value
         self.publish_tf = get("publish_tf").value
+        self.pose_covariance = planar_covariance(
+            get("pose_xy_variance").value,
+            get("pose_xy_variance").value,
+            get("pose_yaw_variance").value,
+        )
+        self.twist_covariance = planar_covariance(
+            get("twist_linear_variance").value,
+            1e6,
+            get("twist_angular_variance").value,
+        )
 
         self.command_rate = get("command_rate").value
         self.command_timeout = get("command_timeout").value
@@ -258,9 +276,11 @@ class BotixBridge(Node):
         message.pose.pose.position.x = pose[0]
         message.pose.pose.position.y = pose[1]
         message.pose.pose.orientation = yaw_to_quaternion(pose[2])
+        message.pose.covariance = self.pose_covariance
 
         message.twist.twist.linear.x = linear
         message.twist.twist.angular.z = angular
+        message.twist.covariance = self.twist_covariance
 
         self.odom_publisher.publish(message)
 

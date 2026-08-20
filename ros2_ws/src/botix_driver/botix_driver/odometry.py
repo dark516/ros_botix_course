@@ -10,6 +10,22 @@ import math
 from typing import Any
 
 
+def planar_covariance(
+    x_variance: float, y_variance: float, yaw_variance: float
+) -> list[float]:
+    """Build a ROS covariance matrix for planar differential-drive data."""
+    if min(x_variance, y_variance, yaw_variance) < 0.0:
+        raise ValueError("variances must be non-negative")
+    covariance = [0.0] * 36
+    covariance[0] = x_variance
+    covariance[7] = y_variance
+    covariance[14] = 1e6
+    covariance[21] = 1e6
+    covariance[28] = 1e6
+    covariance[35] = yaw_variance
+    return covariance
+
+
 @dataclass(frozen=True)
 class OdometryUpdate:
     pose: tuple[float, float, float]
