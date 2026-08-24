@@ -32,6 +32,7 @@ def generate_launch_description():
     rviz_argument = DeclareLaunchArgument(
         "use_rviz", default_value="true", description="start RViz2"
     )
+    scan_argument = DeclareLaunchArgument("scan_topic", default_value="/scan")
 
     bridge = Node(
         package="botix_driver",
@@ -42,6 +43,7 @@ def generate_launch_description():
             LaunchConfiguration("params"),
             {"robot_host": LaunchConfiguration("robot_host")},
         ],
+        remappings=[("scan", LaunchConfiguration("scan_topic"))],
     )
 
     state_publisher = Node(
@@ -62,5 +64,13 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [parameters_argument, host_argument, rviz_argument, state_publisher, bridge, rviz]
+        [
+            parameters_argument,
+            host_argument,
+            rviz_argument,
+            scan_argument,
+            state_publisher,
+            bridge,
+            rviz,
+        ]
     )

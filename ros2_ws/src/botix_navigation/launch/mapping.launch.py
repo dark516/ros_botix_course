@@ -14,6 +14,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     package = get_package_share_directory("botix_navigation")
     driver = get_package_share_directory("botix_driver")
+    lidar_filter = get_package_share_directory("lidar_filter")
     slam = get_package_share_directory("slam_toolbox")
 
     return LaunchDescription([
@@ -26,8 +27,14 @@ def generate_launch_description():
                 launch_arguments={
                     "robot_host": LaunchConfiguration("robot_host"),
                     "use_rviz": "false",
+                    "scan_topic": "/scan_raw",
                 }.items(),
             )],
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(lidar_filter, "launch", "lidar_filter.launch.py")
+            ),
         ),
         Node(package="botix_navigation", executable="cmd_mux", output="screen"),
         IncludeLaunchDescription(

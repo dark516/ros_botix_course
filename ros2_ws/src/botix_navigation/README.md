@@ -18,5 +18,6 @@ ros2 launch botix_navigation navigation.launch.py \
   map:="$HOME/maps/botix_lab.yaml" robot_host:=botix.local
 ```
 
-`twist_mux` is the sole physical `/cmd_vel` publisher in both modes. Teleop
-overrides Nav2, and a true value on `/cmd_vel_lock` blocks both sources.
+The `botix_navigation` command mux is the sole physical `/cmd_vel` publisher in
+both modes. Teleop overrides Nav2, and a true value on `/cmd_vel_lock` blocks
+both sources.

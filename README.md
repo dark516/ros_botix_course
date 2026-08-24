@@ -75,7 +75,7 @@ Install the navigation stack once:
 
 ```bash
 sudo apt install ros-jazzy-slam-toolbox ros-jazzy-navigation2 \
-  ros-jazzy-nav2-bringup ros-jazzy-twist-mux
+  ros-jazzy-nav2-bringup ros-jazzy-laser-filters
 ```
 
 For the first run, build a map while driving manually. The mapping launch opens
@@ -113,7 +113,24 @@ ros2 topic pub --once /cmd_vel_lock std_msgs/msg/Bool '{data: false}'
 ```
 
 The command path is `/cmd_vel_teleop` (priority 100) and `/cmd_vel_nav`
-(priority 50) through `twist_mux` to the hardware-only `/cmd_vel` topic.
+(priority 50) through the `botix_navigation` command mux to the hardware-only
+`/cmd_vel` topic.
+
+### Lidar self-filter
+
+Mapping and navigation automatically route the driver's `/scan_raw` through
+the `lidar_filter` package and publish the safe result as `/scan`. Only
+endpoints inside the robot's physical box are removed. No speckle, range, or
+angular filter is used, so thin obstacles such as table and chair legs remain
+available to both Navigation2 costmaps.
+
+The local and global costmap footprints use the same X/Y envelope as the
+self-filter. Keep these values synchronized whenever the robot geometry changes.
+
+RViz renders `/scan_raw` in translucent red and `/scan` in green. Red-only
+points should be attached to the robot. Any external point missing from green
+means the configured self-box is too large and must be corrected before using
+autonomous navigation.
 
 ## Calibration
 

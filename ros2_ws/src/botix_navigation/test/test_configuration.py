@@ -44,6 +44,29 @@ def test_slam_frames_and_resolution():
     assert slam["mode"] == "mapping"
 
 
+def test_slam_rejects_weak_matches_without_filtering_obstacles():
+    slam = params(load("slam_toolbox.yaml"), "slam_toolbox")
+
+    assert slam["max_laser_range"] == 6.0
+    assert slam["minimum_travel_distance"] == 0.08
+    assert slam["minimum_travel_heading"] == 0.08
+    assert slam["link_match_minimum_response_fine"] == 0.25
+    assert slam["loop_match_minimum_chain_size"] == 15
+    assert slam["loop_match_maximum_variance_coarse"] == 1.0
+    assert slam["loop_match_minimum_response_coarse"] == 0.55
+    assert slam["loop_match_minimum_response_fine"] == 0.65
+    assert "min_pass_through" not in slam
+
+
+def test_rviz_compares_raw_and_filtered_scans():
+    for name in ("mapping.rviz", "navigation.rviz"):
+        source = (PACKAGE / "rviz" / name).read_text(encoding="utf-8")
+        assert "Name: Raw Lidar" in source
+        assert "Value: /scan_raw" in source
+        assert "Name: Filtered Lidar" in source
+        assert "Value: /scan" in source
+
+
 def test_nav2_has_required_servers_and_safe_limits():
     nav2 = load("nav2.yaml")
     required = {
@@ -67,7 +90,10 @@ def test_nav2_has_required_servers_and_safe_limits():
 
 def test_both_costmaps_use_the_measured_footprint_and_scan():
     nav2 = load("nav2.yaml")
-    expected = "[[0.10, 0.10], [0.10, -0.10], [-0.10, -0.10], [-0.10, 0.10]]"
+    expected = (
+        "[[0.14, 0.115], [0.14, -0.115], "
+        "[-0.14, -0.115], [-0.14, 0.115]]"
+    )
 
     for name in ("local_costmap", "global_costmap"):
         costmap = params(nav2[name], name)

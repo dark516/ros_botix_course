@@ -12,7 +12,7 @@
   - base_link is centered between the drive wheel axles
   - base_footprint lies on the floor directly below base_link
   - visuals are primitive placeholders until CAD meshes are exported to STL/DAE
-  - laser_frame is a placeholder frame for the future lidar mount
+  - laser X/Y come from the installed mount; scan-plane Z remains an estimate
 -->
 <robot name="botix">
   <material name="body_grey">
@@ -303,6 +303,7 @@
   <joint name="laser_mount_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser_frame"/>
+    <!-- Top-view scaling puts the lidar 55-60 mm ahead of the axle and centered. -->
     <origin xyz="0.055 0.000 0.050" rpy="0 0 0"/>
   </joint>
 

@@ -10,6 +10,7 @@
   <exec_depend>botix_driver</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>lidar_filter</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>navigation2</exec_depend>
   <exec_depend>rclpy</exec_depend>

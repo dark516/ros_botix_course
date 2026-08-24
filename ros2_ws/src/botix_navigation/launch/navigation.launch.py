@@ -26,6 +26,7 @@ def _validate_map(context):
 def generate_launch_description():
     package = get_package_share_directory("botix_navigation")
     driver = get_package_share_directory("botix_driver")
+    lidar_filter = get_package_share_directory("lidar_filter")
     params = os.path.join(package, "config", "nav2.yaml")
     nav_nodes = [
         "controller_server", "smoother_server", "planner_server",
@@ -41,8 +42,17 @@ def generate_launch_description():
             scoped=True,
             actions=[IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(driver, "launch", "bringup.launch.py")),
-                launch_arguments={"robot_host": LaunchConfiguration("robot_host"), "use_rviz": "false"}.items(),
+                launch_arguments={
+                    "robot_host": LaunchConfiguration("robot_host"),
+                    "use_rviz": "false",
+                    "scan_topic": "/scan_raw",
+                }.items(),
             )],
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(lidar_filter, "launch", "lidar_filter.launch.py")
+            ),
         ),
         Node(package="botix_navigation", executable="cmd_mux", output="screen"),
         Node(
