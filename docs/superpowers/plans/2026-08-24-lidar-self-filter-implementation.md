@@ -122,5 +122,5 @@
 - [x] Verify filtered self-box endpoints become NaN and every outside endpoint/range/intensity remains identical.
 - [x] Verify `/scan_raw`, `/scan`, `/odom`, `/map`, TF, and publisher ownership.
 - [x] Compare a saved stationary map and map-to-odom transform behavior with the captured baseline.
-- [ ] Run mapping with RViz and leave it open for operator inspection.
-- [ ] Commit all tracked changes, push `main`, and report limitations requiring a physical drive near chair/table legs.
+- [x] Run mapping with RViz and leave it open for operator inspection.
+- [x] Commit all tracked changes, push `main`, and report limitations requiring a physical drive near chair/table legs.
