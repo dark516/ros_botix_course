@@ -21,3 +21,8 @@ ros2 launch botix_navigation navigation.launch.py \
 The `botix_navigation` command mux is the sole physical `/cmd_vel` publisher in
 both modes. Teleop overrides Nav2, and a true value on `/cmd_vel_lock` blocks
 both sources.
+
+The mapping profile constrains scan matching to a small neighborhood around
+wheel odometry and disables automatic loop closure. This avoids large false
+corrections from sparse low-cost lidar scans. Drive slowly, avoid wheel slip,
+and use short, smooth turns before saving the map.

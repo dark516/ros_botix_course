@@ -44,17 +44,22 @@ def test_slam_frames_and_resolution():
     assert slam["mode"] == "mapping"
 
 
-def test_slam_rejects_weak_matches_without_filtering_obstacles():
+def test_slam_constrains_scan_matching_to_odometry():
     slam = params(load("slam_toolbox.yaml"), "slam_toolbox")
 
     assert slam["max_laser_range"] == 6.0
     assert slam["minimum_travel_distance"] == 0.08
     assert slam["minimum_travel_heading"] == 0.08
-    assert slam["link_match_minimum_response_fine"] == 0.25
-    assert slam["loop_match_minimum_chain_size"] == 15
-    assert slam["loop_match_maximum_variance_coarse"] == 1.0
-    assert slam["loop_match_minimum_response_coarse"] == 0.55
-    assert slam["loop_match_minimum_response_fine"] == 0.65
+    assert slam["link_match_minimum_response_fine"] == 0.5
+    assert slam["do_loop_closing"] is False
+    assert slam["correlation_search_space_dimension"] == 0.16
+    assert slam["correlation_search_space_resolution"] == 0.01
+    assert slam["correlation_search_space_smear_deviation"] == 0.03
+    assert slam["distance_variance_penalty"] == 0.3
+    assert slam["angle_variance_penalty"] == 0.34906585
+    assert slam["coarse_search_angle_offset"] == 0.08726646
+    assert slam["coarse_angle_resolution"] == 0.01745329
+    assert slam["use_response_expansion"] is False
     assert "min_pass_through" not in slam
 
 

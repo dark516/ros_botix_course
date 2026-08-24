@@ -87,9 +87,10 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel_teleop
 ```
 
-Drive slowly through every reachable area and revisit the starting area so
-SLAM Toolbox can close the loop. Save both the Nav2 occupancy map and the pose
-graph without adding an extension:
+Drive slowly through every reachable area, use smooth turns, and avoid wheel
+slip. Automatic loop closure is disabled for the sparse low-cost lidar because
+false matches caused large pose jumps. Save both the Nav2 occupancy map and the
+pose graph without adding an extension:
 
 ```bash
 ros2 run botix_navigation save_map "$HOME/maps/botix_lab"

@@ -2,10 +2,11 @@
 
 import argparse
 from pathlib import Path
+import subprocess
 
 import rclpy
 from rclpy.node import Node
-from slam_toolbox.srv import SaveMap, SerializePoseGraph
+from slam_toolbox.srv import SerializePoseGraph
 
 
 def map_prefix(value: str) -> Path:
@@ -21,38 +22,57 @@ def map_prefix(value: str) -> Path:
     return path
 
 
+def save_occupancy_map(prefix: Path, run=subprocess.run) -> bool:
+    command = [
+        "ros2",
+        "run",
+        "nav2_map_server",
+        "map_saver_cli",
+        "-f",
+        str(prefix),
+    ]
+    try:
+        result = run(command, check=False, timeout=30.0)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def cleanup_outputs(prefix: Path) -> None:
+    for suffix in (".yaml", ".pgm", ".posegraph", ".data"):
+        prefix.with_suffix(suffix).unlink(missing_ok=True)
+
+
 class MapSerializer(Node):
     def __init__(self) -> None:
         super().__init__("botix_save_map")
-        self.map_client = self.create_client(SaveMap, "/slam_toolbox/save_map")
         self.graph_client = self.create_client(
             SerializePoseGraph, "/slam_toolbox/serialize_map"
         )
 
     def save(self, prefix: Path) -> bool:
-        if not self.map_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().error("SLAM Toolbox save-map service is unavailable")
-            return False
-        map_request = SaveMap.Request()
-        map_request.name.data = str(prefix)
-        future = self.map_client.call_async(map_request)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=30.0)
-        map_response = future.result()
-        if map_response is None or map_response.result != map_response.RESULT_SUCCESS:
-            return False
+        success = False
+        try:
+            if not save_occupancy_map(prefix):
+                self.get_logger().error("Nav2 occupancy map save failed")
+                return False
 
-        if not self.graph_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().error("SLAM Toolbox serialize service is unavailable")
-            return False
-        graph_request = SerializePoseGraph.Request()
-        graph_request.filename = str(prefix)
-        future = self.graph_client.call_async(graph_request)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=30.0)
-        graph_response = future.result()
-        return (
-            graph_response is not None
-            and graph_response.result == graph_response.RESULT_SUCCESS
-        )
+            if not self.graph_client.wait_for_service(timeout_sec=5.0):
+                self.get_logger().error("SLAM Toolbox serialize service is unavailable")
+                return False
+            graph_request = SerializePoseGraph.Request()
+            graph_request.filename = str(prefix)
+            future = self.graph_client.call_async(graph_request)
+            rclpy.spin_until_future_complete(self, future, timeout_sec=30.0)
+            graph_response = future.result()
+            success = (
+                graph_response is not None
+                and graph_response.result == graph_response.RESULT_SUCCESS
+            )
+            return success
+        finally:
+            if not success:
+                cleanup_outputs(prefix)
 
 
 def main(args=None) -> None:
